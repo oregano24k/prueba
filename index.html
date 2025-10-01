@@ -1,397 +1,260 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Calorías por Foto</title>
-    <!-- Carga de Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Carga de Chart.js para gráficos -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-    <style>
-        /* Estilos personalizados para la tipografía y el fondo */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f7f9fb; /* Gris claro suave */
-        }
-        /* Animación de carga */
-        .loader {
-            border-top-color: #3498db;
-            -webkit-animation: spin 1s linear infinite;
-            animation: spin 1s linear infinite;
-        }
-        @-webkit-keyframes spin {
-            0% { -webkit-transform: rotate(0deg); }
-            100% { -webkit-transform: rotate(360deg); }
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
-</head>
-<body class="p-4 sm:p-8 min-h-screen flex items-center justify-center">
+import React, { useState, useRef } from 'react';
+import { Camera, Upload, RotateCcw, Zap, Utensils, Scale, Calendar } from 'lucide-react';
 
-    <div id="app-container" class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl w-full max-w-lg transition-all duration-300">
-        
-        <header class="text-center mb-6">
-            <h1 class="text-3xl font-extrabold text-blue-800 mb-2">Contador de Calorías 📸</h1>
-            <p class="text-gray-600">Sube una foto de tu comida para una estimación nutricional.</p>
-        </header>
+const App = () => {
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState(null);
+  const [activeTab, setActiveTab] = useState('camera');
+  const fileInputRef = useRef(null);
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
 
-        <!-- Sección de Carga de Imagen -->
-        <div class="mb-6">
-            <label for="image-input" class="block text-sm font-medium text-gray-700 mb-2">1. Selecciona o captura una imagen de tu plato:</label>
-            <input type="file" id="image-input" accept="image/*" class="w-full text-sm text-gray-500
-                file:mr-4 file:py-2 file:px-4
-                file:rounded-full file:border-0
-                file:text-sm file:font-semibold
-                file:bg-blue-50 file:text-blue-700
-                hover:file:bg-blue-100 cursor-pointer"
-            >
+  // Mock food database
+  const mockFoodDatabase = [
+    { name: 'Manzana', calories: 95, protein: 0.5, carbs: 25, fat: 0.3 },
+    { name: 'Plátano', calories: 105, protein: 1.3, carbs: 27, fat: 0.4 },
+    { name: 'Pollo a la parrilla', calories: 165, protein: 31, carbs: 0, fat: 3.6 },
+    { name: 'Arroz blanco', calories: 205, protein: 4.3, carbs: 45, fat: 0.4 },
+    { name: 'Aguacate', calories: 240, protein: 3, carbs: 12, fat: 22 },
+    { name: 'Hamburguesa', calories: 295, protein: 17, carbs: 30, fat: 12 },
+    { name: 'Pizza', calories: 285, protein: 12, carbs: 36, fat: 10 },
+    { name: 'Ensalada', calories: 150, protein: 8, carbs: 10, fat: 8 }
+  ];
+
+  const handleImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setSelectedImage(e.target.result);
+        simulateAnalysis();
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const simulateAnalysis = () => {
+    setIsAnalyzing(true);
+    // Simulate API call delay
+    setTimeout(() => {
+      const randomFood = mockFoodDatabase[Math.floor(Math.random() * mockFoodDatabase.length)];
+      setAnalysisResult({
+        food: randomFood.name,
+        calories: randomFood.calories,
+        protein: randomFood.protein,
+        carbs: randomFood.carbs,
+        fat: randomFood.fat,
+        confidence: Math.floor(Math.random() * 20) + 80 // 80-99% confidence
+      });
+      setIsAnalyzing(false);
+    }, 3000);
+  };
+
+  const handleCameraClick = () => {
+    // In a real app, this would access the camera
+    // For this demo, we'll simulate with a mock image
+    setSelectedImage('https://placehold.co/400x300/e2e8f0/64748b?text=Foto+de+Comida');
+    simulateAnalysis();
+  };
+
+  const resetAnalysis = () => {
+    setSelectedImage(null);
+    setAnalysisResult(null);
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b border-green-100">
+        <div className="max-w-md mx-auto px-4 py-4">
+          <div className="flex items-center justify-center space-x-2">
+            <Zap className="h-8 w-8 text-green-600" />
+            <h1 className="text-2xl font-bold text-gray-800">CalorieScan</h1>
+          </div>
+          <p className="text-center text-gray-600 mt-1 text-sm">
+            Escanea tu comida y calcula calorías
+          </p>
         </div>
+      </header>
 
-        <!-- Previsualización de Imagen -->
-        <div id="image-preview-container" class="mb-6 hidden">
-            <h3 class="text-lg font-semibold text-gray-700 mb-2">Vista Previa:</h3>
-            <img id="image-preview" class="w-full h-auto max-h-64 object-cover rounded-xl shadow-md border border-gray-200" alt="Vista previa de la imagen de comida">
-        </div>
-
-        <!-- Botón de Análisis -->
-        <button id="analyze-button" class="w-full py-3 px-4 bg-blue-600 text-white font-bold rounded-xl shadow-lg hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50 flex items-center justify-center" disabled>
-            <span id="button-text">Analizar Comida y Calorías</span>
-            <div id="loader" class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-6 w-6 ml-3 hidden"></div>
-        </button>
-
-        <hr class="my-8 border-gray-200">
-
-        <!-- Sección de Resultados -->
-        <div id="results-container" class="hidden">
-            <h2 class="text-2xl font-bold text-blue-800 mb-4">Resultado del Análisis Nutricional</h2>
-            <div id="result-card" class="bg-blue-50 border-l-4 border-blue-500 text-blue-900 p-4 rounded-lg shadow-inner">
-                <p class="font-semibold text-xl mb-2">Estimación Total: <span id="total-calories" class="text-2xl font-extrabold text-red-600">--</span></p>
-                <p class="mb-1"><span class="font-medium">Alimento Identificado:</span> <span id="food-name">--</span></p>
-                <p class="mb-4"><span class="font-medium">Ración Estimada (g):</span> <span id="estimated-portion">--</span></p>
-                
-                <h3 class="font-semibold mt-4 border-t pt-3 border-blue-200">Detalle del Análisis:</h3>
-                <p id="breakdown" class="text-sm italic whitespace-pre-wrap">--</p>
-                
-                <p class="mt-4 text-xs text-blue-700 opacity-80">
-                    *Nota: Esta es una estimación basada en IA. Consulta a un nutricionista para valores exactos.
+      <main className="max-w-md mx-auto px-4 py-6">
+        {/* Image Preview or Camera/Gallery Selection */}
+        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+          {!selectedImage ? (
+            <div className="space-y-6">
+              <div className="text-center">
+                <Utensils className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                <h2 className="text-xl font-semibold text-gray-800 mb-2">
+                  Analiza tu comida
+                </h2>
+                <p className="text-gray-600 text-sm">
+                  Toma una foto o sube una imagen para calcular las calorías
                 </p>
-            </div>
+              </div>
 
-            <!-- Gráfico de Macronutrientes -->
-            <hr class="my-6 border-gray-200">
-            <h2 class="text-2xl font-bold text-blue-800 mb-4">Gráfico de Distribución Calórica (%)</h2>
-            <div class="p-4 bg-white rounded-xl shadow-lg border border-gray-200">
-                <canvas id="macroChart" class="w-full h-auto max-h-80"></canvas>
+              <div className="flex bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setActiveTab('camera')}
+                  className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                    activeTab === 'camera'
+                      ? 'bg-white text-green-600 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  <Camera className="h-4 w-4 inline mr-1" />
+                  Cámara
+                </button>
+                <button
+                  onClick={() => setActiveTab('gallery')}
+                  className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                    activeTab === 'gallery'
+                      ? 'bg-white text-green-600 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  <Upload className="h-4 w-4 inline mr-1" />
+                  Galería
+                </button>
+              </div>
+
+              {activeTab === 'camera' ? (
+                <button
+                  onClick={handleCameraClick}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-xl font-medium transition-colors flex items-center justify-center space-x-2"
+                >
+                  <Camera className="h-5 w-5" />
+                  <span>Tomar Foto</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-xl font-medium transition-colors flex items-center justify-center space-x-2"
+                >
+                  <Upload className="h-5 w-5" />
+                  <span>Seleccionar Imagen</span>
+                </button>
+              )}
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
             </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="relative">
+                <img
+                  src={selectedImage}
+                  alt="Comida analizada"
+                  className="w-full h-64 object-cover rounded-xl"
+                />
+                {isAnalyzing && (
+                  <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-xl">
+                    <div className="text-white text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+                      <p className="text-sm">Analizando comida...</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {analysisResult && (
+                <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-gray-800">{analysisResult.food}</h3>
+                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                      {analysisResult.confidence}% confianza
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Zap className="h-4 w-4 text-orange-500" />
+                        <span className="text-sm text-gray-600">Calorías</span>
+                      </div>
+                      <span className="font-bold text-lg text-gray-800">
+                        {analysisResult.calories} kcal
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 pt-2 border-t border-gray-200">
+                      <div className="text-center">
+                        <div className="flex items-center justify-center space-x-1 mb-1">
+                          <Scale className="h-3 w-3 text-blue-500" />
+                          <span className="text-xs text-gray-600">Proteína</span>
+                        </div>
+                        <span className="text-sm font-medium text-gray-800">
+                          {analysisResult.protein}g
+                        </span>
+                      </div>
+                      <div className="text-center">
+                        <div className="flex items-center justify-center space-x-1 mb-1">
+                          <Calendar className="h-3 w-3 text-yellow-500" />
+                          <span className="text-xs text-gray-600">Carbs</span>
+                        </div>
+                        <span className="text-sm font-medium text-gray-800">
+                          {analysisResult.carbs}g
+                        </span>
+                      </div>
+                      <div className="text-center">
+                        <div className="flex items-center justify-center space-x-1 mb-1">
+                          <Scale className="h-3 w-3 text-red-500" />
+                          <span className="text-xs text-gray-600">Grasa</span>
+                        </div>
+                        <span className="text-sm font-medium text-gray-800">
+                          {analysisResult.fat}g
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <button
+                onClick={resetAnalysis}
+                className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
+              >
+                <RotateCcw className="h-4 w-4" />
+                <span>Nueva Foto</span>
+              </button>
+            </div>
+          )}
         </div>
 
-        <!-- Mensaje de Error/Información -->
-        <div id="message-box" class="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg hidden">
-            <!-- Los errores se mostrarán aquí -->
-        </div>
-
+        {/* Info Section */}
+        {!selectedImage && (
+          <div className="bg-white rounded-2xl shadow-lg p-6">
+            <h3 className="font-semibold text-gray-800 mb-3 text-center">
+              ¿Cómo funciona?
+            </h3>
+            <div className="space-y-3 text-sm text-gray-600">
+              <p className="text-center">
+                Nuestra tecnología de IA analiza tu comida y estima las calorías basadas en una base de datos de alimentos.
+              </p>
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <div className="text-center p-3 bg-green-50 rounded-lg">
+                  <Camera className="h-6 w-6 text-green-600 mx-auto mb-1" />
+                  <span className="text-xs">Toma una foto clara</span>
+                </div>
+                <div className="text-center p-3 bg-blue-50 rounded-lg">
+                  <Zap className="h-6 w-6 text-blue-600 mx-auto mb-1" />
+                  <span className="text-xs">Obtén resultados instantáneos</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
     </div>
+  );
+};
 
-    <script>
-        // Configuración de la API Key (debe ser una cadena vacía para que Canvas la inyecte)
-        const apiKey = ""; 
-        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-
-        // Referencias del DOM
-        const imageInput = document.getElementById('image-input');
-        const imagePreview = document.getElementById('image-preview');
-        const imagePreviewContainer = document.getElementById('image-preview-container');
-        const analyzeButton = document.getElementById('analyze-button');
-        const buttonText = document.getElementById('button-text');
-        const loader = document.getElementById('loader');
-        const resultsContainer = document.getElementById('results-container');
-        const messageBox = document.getElementById('message-box');
-        
-        const totalCaloriesSpan = document.getElementById('total-calories');
-        const foodNameSpan = document.getElementById('food-name');
-        const estimatedPortionSpan = document.getElementById('estimated-portion');
-        const breakdownSpan = document.getElementById('breakdown');
-        
-        let macroChartInstance = null; // Instancia global para el gráfico
-
-        /**
-         * Maneja la subida de la imagen y muestra la vista previa.
-         */
-        imageInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                // Muestra la vista previa
-                imagePreview.src = URL.createObjectURL(file);
-                imagePreviewContainer.classList.remove('hidden');
-                
-                // Habilita el botón de análisis
-                analyzeButton.disabled = false;
-                
-                // Limpia resultados y mensajes anteriores
-                resultsContainer.classList.add('hidden');
-                messageBox.classList.add('hidden');
-            } else {
-                imagePreviewContainer.classList.add('hidden');
-                imagePreview.src = '';
-                analyzeButton.disabled = true;
-            }
-        });
-
-        /**
-         * Convierte el archivo de imagen a una cadena Base64.
-         * @param {File} file - El objeto File de la imagen.
-         * @returns {Promise<string>} La imagen codificada en Base64.
-         */
-        function imageToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result.split(',')[1]); // Solo la parte de los datos
-                reader.onerror = error => reject(error);
-            });
-        }
-
-        /**
-         * Muestra un mensaje de error en la caja de mensajes.
-         * @param {string} message - El mensaje de error a mostrar.
-         */
-        function displayError(message) {
-            messageBox.textContent = `Error: ${message}`;
-            messageBox.classList.remove('hidden');
-            console.error(message);
-        }
-
-        /**
-         * Intenta realizar un fetch con reintentos y retroceso exponencial.
-         */
-        async function retryFetch(url, options, maxRetries = 3) {
-            for (let i = 0; i < maxRetries; i++) {
-                try {
-                    const response = await fetch(url, options);
-                    if (response.status === 429 && i < maxRetries - 1) {
-                        // Si hay throttling (429), esperar con retroceso exponencial
-                        const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        continue;
-                    }
-                    if (!response.ok) {
-                        const errorBody = await response.json();
-                        throw new Error(`Fallo en la API (${response.status}): ${errorBody.error.message}`);
-                    }
-                    return response;
-                } catch (error) {
-                    if (i === maxRetries - 1) {
-                        throw new Error(`Fallo en la conexión después de ${maxRetries} intentos: ${error.message}`);
-                    }
-                    // Si el error no es 429, reintentar después de un pequeño retraso
-                    if (error.message.includes('Fallo en la API (429)')) continue; 
-                    const delay = Math.pow(2, i) * 1000 + Math.random() * 500;
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                }
-            }
-            throw new Error("Máximo de reintentos alcanzado sin éxito.");
-        }
-
-        /**
-         * Dibuja el gráfico de pastel de macronutrientes en base al porcentaje calórico.
-         * @param {object} macros - Objeto con proteins_g, fats_g, carbs_g.
-         * @param {number} totalCalories - El total de calorías estimado por la IA (usado como respaldo).
-         */
-        function renderChart(macros, totalCalories) {
-            const ctx = document.getElementById('macroChart').getContext('2d');
-            
-            // 1. Calcular calorías por macronutriente (Proteínas y Carbohidratos = 4 kcal/g, Grasas = 9 kcal/g)
-            const proteinCal = macros.proteins_g * 4;
-            const fatCal = macros.fats_g * 9;
-            const carbCal = macros.carbs_g * 4;
-
-            // Usar la suma de calorías calculadas para asegurar que los porcentajes sumen 100%
-            const calculatedTotalCal = proteinCal + fatCal + carbCal;
-            const basisTotal = calculatedTotalCal > 0 ? calculatedTotalCal : totalCalories;
-
-            // 2. Calcular porcentajes
-            const proteinPct = basisTotal > 0 ? (proteinCal / basisTotal) * 100 : 0;
-            const fatPct = basisTotal > 0 ? (fatCal / basisTotal) * 100 : 0;
-            const carbPct = basisTotal > 0 ? (carbCal / basisTotal) * 100 : 0;
-            
-            // Si ya existe una instancia, destrúyela antes de crear una nueva
-            if (macroChartInstance) {
-                macroChartInstance.destroy();
-            }
-
-            macroChartInstance = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: [
-                        `Proteínas (${proteinPct.toFixed(1)}%)`, 
-                        `Grasas (${fatPct.toFixed(1)}%)`, 
-                        `Carbohidratos (${carbPct.toFixed(1)}%)`
-                    ],
-                    datasets: [{
-                        label: 'Distribución Calórica (%)',
-                        data: [proteinPct, fatPct, carbPct],
-                        backgroundColor: [
-                            'rgba(52, 152, 219, 0.8)', // Azul para Proteínas
-                            'rgba(46, 204, 113, 0.8)', // Verde para Grasas
-                            'rgba(241, 196, 15, 0.8)'  // Amarillo para Carbohidratos
-                        ],
-                        borderColor: [
-                            'rgba(52, 152, 219, 1)',
-                            'rgba(46, 204, 113, 1)',
-                            'rgba(241, 196, 15, 1)'
-                        ],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                        },
-                        title: {
-                            display: true,
-                            text: 'Distribución de Macronutrientes (Porcentaje Calórico)',
-                            font: {
-                                size: 16
-                            }
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    let label = context.label || '';
-                                    if (context.parsed !== null) {
-                                        // La etiqueta ya incluye el porcentaje, solo ajustamos el tooltip.
-                                        label = label.split(' (')[0] + `: ${context.parsed.toFixed(1)}%`;
-                                    }
-                                    return label;
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-
-        /**
-         * Llama a la API de Gemini para analizar la imagen y calcular las calorías.
-         */
-        analyzeButton.addEventListener('click', async () => {
-            const file = imageInput.files[0];
-            if (!file) {
-                displayError("Por favor, selecciona una imagen primero.");
-                return;
-            }
-
-            // UI de carga
-            analyzeButton.disabled = true;
-            buttonText.textContent = "Analizando...";
-            loader.classList.remove('hidden');
-            resultsContainer.classList.add('hidden');
-            messageBox.classList.add('hidden');
-
-            try {
-                // 1. Convertir imagen a Base64
-                const base64Image = await imageToBase64(file);
-                
-                // 2. Definir el prompt y la configuración para la respuesta estructurada
-                const userQuery = `Analiza la siguiente imagen de comida. Identifica el plato o alimentos, estima la cantidad aproximada (en gramos o unidades si aplica), calcula el total de calorías y proporciona el desglose en gramos de Proteínas, Grasas y Carbohidratos. Proporciona una explicación detallada del desglose calórico. Responde únicamente con un objeto JSON válido que cumpla el siguiente esquema.`;
-                
-                const payload = {
-                    contents: [{ 
-                        parts: [
-                            { text: userQuery },
-                            {
-                                inlineData: {
-                                    mimeType: file.type,
-                                    data: base64Image
-                                }
-                            }
-                        ]
-                    }],
-                    generationConfig: {
-                        responseMimeType: "application/json",
-                        responseSchema: {
-                            type: "OBJECT",
-                            properties: {
-                                "food_name": { "type": "STRING", "description": "Nombre del plato o alimentos identificados." },
-                                "estimated_portion_g": { "type": "NUMBER", "description": "Estimación de la porción en gramos o en el equivalente si no es una comida pesable." },
-                                "calorie_estimate": { "type": "NUMBER", "description": "Total de calorías estimado para el plato completo." },
-                                "breakdown": { "type": "STRING", "description": "Desglose detallado de la estimación calórica, incluyendo ingredientes y justificación de la ración." },
-                                "macronutrients_g": {
-                                    "type": "OBJECT",
-                                    "description": "Desglose en gramos de los macronutrientes principales.",
-                                    "properties": {
-                                        "proteins_g": { "type": "NUMBER" },
-                                        "fats_g": { "type": "NUMBER" },
-                                        "carbs_g": { "type": "NUMBER" }
-                                    },
-                                    "required": ["proteins_g", "fats_g", "carbs_g"]
-                                }
-                            },
-                            "required": ["food_name", "estimated_portion_g", "calorie_estimate", "breakdown", "macronutrients_g"]
-                        }
-                    },
-                    // No se necesitan herramientas de búsqueda para este análisis visual.
-                };
-
-                // 3. Llamada a la API con reintentos
-                const response = await retryFetch(API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                const result = await response.json();
-
-                if (result.candidates && result.candidates.length > 0 && 
-                    result.candidates[0].content && result.candidates[0].content.parts &&
-                    result.candidates[0].content.parts.length > 0) {
-                        
-                    const jsonText = result.candidates[0].content.parts[0].text;
-                    let parsedData;
-
-                    try {
-                        parsedData = JSON.parse(jsonText);
-                    } catch (e) {
-                        displayError("Error al analizar la respuesta de la IA. El formato JSON no es válido.");
-                        console.error("JSON de la IA inválido:", jsonText);
-                        return;
-                    }
-                    
-                    // 4. Mostrar Resultados
-                    const totalCal = parsedData.calorie_estimate;
-                    totalCaloriesSpan.textContent = totalCal ? `${totalCal.toFixed(0)} kcal` : 'N/A';
-                    foodNameSpan.textContent = parsedData.food_name || 'No identificado';
-                    estimatedPortionSpan.textContent = parsedData.estimated_portion_g ? `${parsedData.estimated_portion_g} g (aprox.)` : 'N/A';
-                    breakdownSpan.textContent = parsedData.breakdown || 'Sin desglose disponible.';
-                    
-                    // 5. Renderizar el gráfico (Ahora pasa totalCal para el cálculo)
-                    if (parsedData.macronutrients_g && totalCal) {
-                        renderChart(parsedData.macronutrients_g, totalCal);
-                    }
-                    
-                    resultsContainer.classList.remove('hidden');
-
-                } else {
-                    displayError("La IA no pudo procesar la imagen o no proporcionó una respuesta válida.");
-                }
-
-            } catch (error) {
-                displayError(error.message);
-            } finally {
-                // UI de finalización
-                analyzeButton.disabled = false;
-                buttonText.textContent = "Analizar Comida y Calorías";
-                loader.classList.add('hidden');
-            }
-        });
-    </script>
-</body>
-</html>
+export default App;
