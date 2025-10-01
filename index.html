@@ -19,6 +19,14 @@
             border-left: 5px solid #3b82f6; /* Color azul de acento */
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
+        /* Clase condicional para el botón activado */
+        .calculate-active {
+            @apply bg-blue-600 opacity-100 cursor-pointer hover:bg-blue-700;
+        }
+        /* Clase condicional para el botón desactivado */
+        .calculate-disabled {
+            @apply bg-gray-400 opacity-70 cursor-not-allowed;
+        }
     </style>
 </head>
 <body class="min-h-screen flex items-start justify-center p-4 md:p-8">
@@ -33,6 +41,7 @@
 
         <!-- Área de Carga de Imagen y Previsualización -->
         <div class="mb-6 border-2 border-dashed border-blue-300 p-4 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors">
+            <!-- La función de cámara ya está incluida con 'capture="camera"' -->
             <input type="file" id="imageInput" accept="image/*" capture="camera" class="hidden" onchange="handleImageUpload(event)">
             <label for="imageInput" class="flex flex-col items-center justify-center cursor-pointer p-4">
                 <svg class="w-10 h-10 text-blue-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
@@ -47,7 +56,8 @@
         </div>
 
         <!-- Botón de Cálculo -->
-        <button id="calculateButton" onclick="calculateCalories()" disabled class="w-full py-3 px-4 bg-gray-400 text-white font-bold rounded-lg transition-colors duration-300 opacity-70 cursor-not-allowed shadow-md">
+        <!-- Utilizamos la clase 'calculate-disabled' por defecto -->
+        <button id="calculateButton" onclick="calculateCalories()" disabled class="w-full py-3 px-4 text-white font-bold rounded-lg transition-colors duration-300 shadow-md calculate-disabled">
             Calcular Calorías
         </button>
 
@@ -86,23 +96,36 @@
         const errorMessage = document.getElementById('errorMessage');
 
         // URL y API Key para Gemini (gemini-2.5-flash-preview-05-20 para multimodal)
+        // Nota: La clave será inyectada automáticamente por el entorno si se deja como cadena vacía.
+        // ADVERTENCIA: En producción real, NO dejes la clave de API expuesta en el código cliente.
         const MODEL_NAME = 'gemini-2.5-flash-preview-05-20';
-        const apiKey = ""; // La clave será proporcionada por el entorno de Canvas si está vacía.
+        const apiKey = ""; 
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKey}`;
+
+        // Función para manejar el estado del botón (UX mejorado)
+        function setButtonState(isDisabled, text) {
+            calculateButton.disabled = isDisabled;
+            calculateButton.textContent = text;
+            
+            // Alternar clases de estilo para el estado activo/inactivo
+            if (isDisabled) {
+                calculateButton.classList.remove('calculate-active');
+                calculateButton.classList.add('calculate-disabled');
+            } else {
+                calculateButton.classList.remove('calculate-disabled');
+                calculateButton.classList.add('calculate-active');
+            }
+        }
 
         // Función para mostrar mensajes de error
         function displayError(message) {
             errorMessage.textContent = message;
             errorBox.classList.remove('hidden');
             loadingIndicator.classList.add('hidden');
-            calculateButton.disabled = false;
-            calculateButton.classList.replace('bg-blue-600', 'bg-red-500');
-            calculateButton.classList.replace('opacity-100', 'opacity-70');
-            calculateButton.classList.add('cursor-pointer');
-            calculateButton.classList.remove('cursor-not-allowed');
+            setButtonState(false, 'Calcular Calorías');
         }
 
-        // Función para convertir ArrayBuffer a Base64 (necesario para la API)
+        // Función para convertir ArrayBuffer a Base64 (no usada actualmente, pero mantenida)
         function arrayBufferToBase64(buffer) {
             let binary = '';
             const bytes = new Uint8Array(buffer);
@@ -119,10 +142,7 @@
             if (!file) {
                 base64Image = null;
                 imagePreviewContainer.classList.add('hidden');
-                calculateButton.disabled = true;
-                calculateButton.classList.replace('bg-blue-600', 'bg-gray-400');
-                calculateButton.classList.replace('opacity-100', 'opacity-70');
-                calculateButton.classList.add('cursor-not-allowed');
+                setButtonState(true, 'Calcular Calorías');
                 return;
             }
 
@@ -143,11 +163,7 @@
                 base64Image = { mimeType, data: base64Data };
 
                 // Habilitar el botón de cálculo
-                calculateButton.disabled = false;
-                calculateButton.classList.replace('bg-gray-400', 'bg-blue-600');
-                calculateButton.classList.replace('opacity-70', 'opacity-100');
-                calculateButton.classList.remove('cursor-not-allowed');
-                calculateButton.classList.add('cursor-pointer');
+                setButtonState(false, 'Calcular Calorías');
             };
 
             reader.readAsDataURL(file);
@@ -192,10 +208,9 @@
             resultOutput.innerHTML = '';
             errorBox.classList.add('hidden');
 
-            // Mostrar el indicador de carga
+            // Mostrar el indicador de carga y deshabilitar el botón
             loadingIndicator.classList.remove('hidden');
-            calculateButton.disabled = true;
-            calculateButton.textContent = 'Analizando...';
+            setButtonState(true, 'Analizando...');
 
             const systemPrompt = "Eres un experto en nutrición y análisis de alimentos. Tu tarea es analizar la imagen de comida proporcionada, estimar las porciones de los alimentos visibles, y calcular el contenido calórico total aproximado. Proporciona tu respuesta SÓLO en español. El formato de la respuesta debe ser: 1. Un encabezado en negrita con el Nombre del Plato (inventa uno si es necesario). 2. La Estimación de Calorías TOTALES. 3. Una tabla simple o una lista con un Resumen Nutricional Breve (Carbohidratos, Proteínas, Grasas). 4. Un análisis de la Composición del Plato (los ingredientes que detectaste y por qué calculaste esa cantidad de calorías).";
             
@@ -230,9 +245,12 @@
 
                 // 4. Mostrar el resultado
                 loadingIndicator.classList.add('hidden');
+                setButtonState(false, 'Calcular Calorías');
+
                 resultOutput.innerHTML = `
                     <div class="result-box p-4 rounded-lg">
                         <h2 class="text-xl font-bold text-gray-800 mb-4">Análisis Nutricional Estimado</h2>
+                        <!-- Usamos la clase 'prose' para renderizar el formato Markdown de la respuesta de la API -->
                         <div class="prose max-w-none text-gray-700">
                             ${text.replace(/\n/g, '<br>')}
                         </div>
@@ -245,21 +263,12 @@
             } catch (error) {
                 console.error("Error en el cálculo de calorías:", error);
                 displayError(`No se pudo completar el análisis. ${error.message}`);
-            } finally {
-                // Restablecer el botón
-                calculateButton.disabled = false;
-                calculateButton.textContent = 'Calcular Calorías';
-                loadingIndicator.classList.add('hidden');
             }
         };
 
-        // Inicialización para evitar que el botón quede desactivado si no hay imagen
+        // Inicialización del estado del botón al cargar la página
         document.addEventListener('DOMContentLoaded', () => {
-            calculateButton.textContent = 'Calcular Calorías';
-            calculateButton.disabled = true;
-            calculateButton.classList.replace('bg-blue-600', 'bg-gray-400');
-            calculateButton.classList.replace('opacity-100', 'opacity-70');
-            calculateButton.classList.add('cursor-not-allowed');
+            setButtonState(true, 'Calcular Calorías');
         });
     </script>
 </body>
