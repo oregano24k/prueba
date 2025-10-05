@@ -1,346 +1,351 @@
-import React, { useState, useRef } from 'react';
-import { Camera, Upload, X, Info, Utensils } from 'lucide-react';
-
-export default function CalorieCalculator() {
-  const [image, setImage] = useState(null);
-  const [analyzing, setAnalyzing] = useState(false);
-  const [result, setResult] = useState(null);
-  const [useCamera, setUseCamera] = useState(false);
-  const fileInputRef = useRef(null);
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-
- const foodDatabase = {
-    'ensalada': { calories: 150, protein: 5, carbs: 20, fat: 8, confidence: 0.85 },
-    'pizza': { calories: 285, protein: 12, carbs: 36, fat: 10, confidence: 0.90 },
-    'hamburguesa': { calories: 540, protein: 25, carbs: 45, fat: 30, confidence: 0.88 },
-    'pasta': { calories: 220, protein: 8, carbs: 43, fat: 3, confidence: 0.82 },
-    'sushi': { calories: 200, protein: 9, carbs: 28, fat: 6, confidence: 0.87 },
-    'pollo': { calories: 165, protein: 31, carbs: 0, fat: 4, confidence: 0.91 },
-    'arroz': { calories: 130, protein: 3, carbs: 28, fat: 0, confidence: 0.83 },
-    'frutas': { calories: 60, protein: 1, carbs: 15, fat: 0, confidence: 0.80 },
-    'sandwich': { calories: 300, protein: 15, carbs: 35, fat: 12, confidence: 0.86 },
-    'taco': { calories: 210, protein: 10, carbs: 20, fat: 11, confidence: 0.84 },
-  };
-
-  const handleFileSelect = (e) => {
-    const file = e.target.files[0];
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setImage(e.target.result);
-        setResult(null);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        setUseCamera(true);
-      }
-    } catch (err) {
-      alert('No se pudo acceder a la cámara. Por favor, verifica los permisos.');
-    }
-  };
-
-  const capturePhoto = () => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    
-    if (video && canvas) {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0);
-      
-      const imageData = canvas.toDataURL('image/jpeg');
-      setImage(imageData);
-      stopCamera();
-    }
-  };
-
-  const stopCamera = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const tracks = videoRef.current.srcObject.getTracks();
-      tracks.forEach(track => track.stop());
-      setUseCamera(false);
-    }
-  };
-
- // OPCIÓN 1: Simulación (actual - no requiere API)
-  const analyzeImageSimulated = () => {
-    setAnalyzing(true);
-    
-    setTimeout(() => {
-      const foods = Object.keys(foodDatabase);
-      const randomFood = foods[Math.floor(Math.random() * foods.length)];
-      const foodData = foodDatabase[randomFood];
-      
-      setResult({
-        food: randomFood,
-        ...foodData,
-        portion: '1 porción (100g)',
-      });
-      setAnalyzing(false);
-    }, 2000);
-  };
-
-  // OPCIÓN 2: Con API real (ejemplo con Clarifai)
-  const analyzeImageWithAPI = async () => {
-    setAnalyzing(true);
-    
-    try {
-      // 1. Configurar tu API Key (obtenida de Clarifai)
-      const API_KEY = 'ea79c3f8f66e4c759ea3ea4a7fa9499d';
-      const MODEL_ID = 'food-item-recognition';
-      
-      // 2. Preparar la imagen en formato base64
-      const base64Image = image.split(',')[1];
-      
-      // 3. Hacer la petición a la API
-      const response = await fetch(
-        `https://api.clarifai.com/v2/models/${MODEL_ID}/outputs`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Key ${API_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            inputs: [{
-              data: {
-                image: {
-                  base64: base64Image
-                }
-              }
-            }]
-          })
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplicación de Reconocimiento de Imágenes</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-      );
-      
-      // 4. Procesar la respuesta
-      const data = await response.json();
-      const detectedFood = data.outputs[0].data.concepts[0].name;
-      
-      // 5. Buscar información nutricional
-      const foodData = foodDatabase[detectedFood] || {
-        calories: 200,
-        protein: 10,
-        carbs: 25,
-        fat: 8,
-        confidence: 0.75
-      };
-      
-      setResult({
-        food: detectedFood,
-        ...foodData,
-        portion: '1 porción (100g)',
-      });
-      
-    } catch (error) {
-      console.error('Error al analizar:', error);
-      alert('Error al analizar la imagen. Verifica tu conexión y API Key.');
-    } finally {
-      setAnalyzing(false);
-    }
-  };
-
-  // ============================================
-  // CONFIGURACIÓN: Elige qué versión usar
-  // ============================================
-  
-  // Opción A: Usar simulación (NO requiere API Key)
-  const analyzeImage = analyzeImageSimulated;
-  
-  // Opción B: Usar API real (requiere API Key de Clarifai)
-  // Descomenta la línea siguiente y comenta la anterior:
-  // const analyzeImage = analyzeImageWithAPI;
-
-  const reset = () => {
-    setImage(null);
-    setResult(null);
-    stopCamera();
-  };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8 pt-6">
-          <div className="flex items-center justify-center gap-3 mb-3">
-            <Utensils className="w-10 h-10 text-emerald-600" />
-            <h1 className="text-4xl font-bold text-gray-800">
-              Calculadora de Calorías
-            </h1>
-          </div>
-          <p className="text-gray-600">Analiza tus comidas con solo una foto</p>
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 800px;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+        
+        .upload-area {
+            border: 3px dashed #ddd;
+            border-radius: 15px;
+            padding: 40px 20px;
+            margin: 20px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #fafafa;
+        }
+        
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f0f5ff;
+        }
+        
+        .upload-area.active {
+            border-color: #667eea;
+            background: #e6f0ff;
+        }
+        
+        .upload-icon {
+            font-size: 3rem;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        
+        .upload-text {
+            color: #555;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+        }
+        
+        .upload-hint {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        
+        #file-input {
+            display: none;
+        }
+        
+        .preview-container {
+            margin: 25px 0;
+            display: none;
+        }
+        
+        #image-preview {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .result-container {
+            display: none;
+            margin-top: 25px;
+            padding: 25px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+            border-radius: 15px;
+            text-align: left;
+        }
+        
+        .result-title {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .result-content {
+            color: #555;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+        
+        .loading {
+            display: none;
+            margin: 20px 0;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+            display: inline-block;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 25px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .upload-area {
+                padding: 30px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Reconocimiento de Imágenes</h1>
+        <p class="subtitle">Sube una foto y descubre qué contiene</p>
+        
+        <div class="upload-area" id="upload-area">
+            <div class="upload-icon">📷</div>
+            <p class="upload-text">Haz clic para subir una imagen</p>
+            <p class="upload-hint">Compatible con JPG, PNG, GIF (Máx. 5MB)</p>
+            <input type="file" id="file-input" accept="image/*">
         </div>
-
-        <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
-          {!image && !useCamera && (
-            <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <button
-                  onClick={startCamera}
-                  className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-xl font-semibold transition-colors shadow-lg"
-                >
-                  <Camera className="w-5 h-5" />
-                  Tomar Foto
-                </button>
-                
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-8 py-4 rounded-xl font-semibold transition-colors shadow-lg"
-                >
-                  <Upload className="w-5 h-5" />
-                  Subir Imagen
-                </button>
-              </div>
-              
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-
-              <div className="mt-8 p-4 bg-blue-50 rounded-xl flex items-start gap-3">
-                <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-blue-900">
-                  Esta app utiliza simulación de IA para estimar las calorías. Los resultados son aproximados y con fines educativos.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {useCamera && (
-            <div className="space-y-4">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                className="w-full rounded-xl"
-              />
-              <canvas ref={canvasRef} className="hidden" />
-              
-              <div className="flex gap-3 justify-center">
-                <button
-                  onClick={capturePhoto}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-                >
-                  Capturar
-                </button>
-                <button
-                  onClick={stopCamera}
-                  className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          )}
-
-          {image && !useCamera && (
-            <div className="space-y-4">
-              <div className="relative">
-                <img
-                  src={image}
-                  alt="Comida seleccionada"
-                  className="w-full rounded-xl shadow-md"
-                />
-                <button
-                  onClick={reset}
-                  className="absolute top-3 right-3 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {!result && (
-                <button
-                  onClick={analyzeImage}
-                  disabled={analyzing}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-400 text-white py-4 rounded-xl font-semibold transition-colors shadow-lg"
-                >
-                  {analyzing ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin" />
-                      Analizando...
-                    </span>
-                  ) : (
-                    'Analizar Imagen'
-                  )}
-                </button>
-              )}
-
-              {result && (
-                <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-6 space-y-4">
-                  <div className="text-center">
-                    <h3 className="text-2xl font-bold text-gray-800 mb-1 capitalize">
-                      {result.food}
-                    </h3>
-                    <p className="text-sm text-gray-600">{result.portion}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Confianza: {(result.confidence * 100).toFixed(0)}%
-                    </p>
-                  </div>
-
-                  <div className="bg-white rounded-xl p-6 shadow-sm">
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div className="text-center p-4 bg-emerald-50 rounded-lg">
-                        <p className="text-3xl font-bold text-emerald-600">
-                          {result.calories}
-                        </p>
-                        <p className="text-sm text-gray-600">Calorías</p>
-                      </div>
-                      
-                      <div className="text-center p-4 bg-blue-50 rounded-lg">
-                        <p className="text-3xl font-bold text-blue-600">
-                          {result.protein}g
-                        </p>
-                        <p className="text-sm text-gray-600">Proteína</p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="text-center p-4 bg-amber-50 rounded-lg">
-                        <p className="text-3xl font-bold text-amber-600">
-                          {result.carbs}g
-                        </p>
-                        <p className="text-sm text-gray-600">Carbohidratos</p>
-                      </div>
-                      
-                      <div className="text-center p-4 bg-purple-50 rounded-lg">
-                        <p className="text-3xl font-bold text-purple-600">
-                          {result.fat}g
-                        </p>
-                        <p className="text-sm text-gray-600">Grasas</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={reset}
-                    className="w-full bg-gray-600 hover:bg-gray-700 text-white py-3 rounded-xl font-semibold transition-colors"
-                  >
-                    Analizar otra imagen
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+        
+        <div class="preview-container" id="preview-container">
+            <img id="image-preview" alt="Vista previa">
         </div>
-
-        <div className="text-center text-sm text-gray-500">
-          <p>💡 Los valores nutricionales son estimaciones basadas en porciones estándar</p>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Analizando tu imagen...</p>
         </div>
-      </div>
+        
+        <div class="result-container" id="result-container">
+            <h3 class="result-title">🔍 Resultados del Reconocimiento</h3>
+            <p class="result-content" id="result-content"></p>
+        </div>
+        
+        <button class="btn" id="analyze-btn" disabled>Analizar Imagen</button>
     </div>
-  );
-}
+
+    <script>
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        const previewContainer = document.getElementById('preview-container');
+        const imagePreview = document.getElementById('image-preview');
+        const loading = document.getElementById('loading');
+        const resultContainer = document.getElementById('result-container');
+        const resultContent = document.getElementById('result-content');
+        const analyzeBtn = document.getElementById('analyze-btn');
+
+        // Datos de reconocimiento simulado
+        const mockRecognitionData = [
+            {
+                keywords: ['gato', 'gatito', 'felino', 'mascota'],
+                result: '¡Esto parece ser un gato! Los gatos son pequeños mamíferos carnívoros domesticados conocidos por su agilidad, naturaleza juguetona y compañía con los humanos.'
+            },
+            {
+                keywords: ['perro', 'cachorro', 'canino', 'mascota'],
+                result: '¡Esto parece ser un perro! Los perros son mamíferos domesticados leales que han sido compañeros humanos durante miles de años, conocidos por su naturaleza protectora y afecto.'
+            },
+            {
+                keywords: ['coche', 'automóvil', 'vehículo', 'transporte'],
+                result: '¡Esto es un automóvil! Los coches son vehículos de motor con ruedas utilizados para el transporte, típicamente con cuatro ruedas y propulsados por un motor de combustión interna o motor eléctrico.'
+            },
+            {
+                keywords: ['árbol', 'planta', 'bosque', 'naturaleza'],
+                result: '¡Esto parece ser un árbol! Los árboles son plantas perennes con troncos leñosos, ramas y hojas, desempeñando un papel crucial en los ecosistemas al producir oxígeno y proporcionar hábitat.'
+            },
+            {
+                keywords: ['edificio', 'casa', 'arquitectura', 'estructura'],
+                result: '¡Esto es un edificio! Los edificios son estructuras con techos y paredes que proporcionan refugio y sirven para diversos propósitos como uso residencial, comercial o industrial.'
+            },
+            {
+                keywords: ['comida', 'comida', 'plato', 'cocina'],
+                result: '¡Esto parece ser comida! La comida proporciona nutrientes esenciales para la supervivencia y viene en innumerables variedades en diferentes culturas y cocinas.'
+            },
+            {
+                keywords: ['persona', 'humano', 'gente', 'rostro'],
+                result: '¡Esto parece ser una persona! Los humanos son mamíferos sociales altamente inteligentes caracterizados por su postura erguida, lenguaje complejo y habilidades cognitivas avanzadas.'
+            },
+            {
+                keywords: ['flor', 'flor', 'planta', 'jardín'],
+                result: '¡Esto es una flor! Las flores son las estructuras reproductivas de las plantas con flores, conocidas por su belleza, fragancia y papel en la polinización.'
+            },
+            {
+                keywords: ['montaña', 'colina', 'pico', 'paisaje'],
+                result: '¡Esto parece ser una montaña! Las montañas son grandes formaciones de tierra que se elevan prominentemente por encima de sus alrededores, formadas por fuerzas tectónicas o actividad volcánica.'
+            },
+            {
+                keywords: ['océano', 'mar', 'agua', 'playa'],
+                result: '¡Esto parece ser un océano! Los océanos son vastos cuerpos de agua salada que cubren aproximadamente el 71% de la superficie de la Tierra y contienen el 97% del agua de la Tierra.'
+            }
+        ];
+
+        // Resultado predeterminado para imágenes no reconocidas
+        const defaultResult = 'No estoy del todo seguro de qué es esto, ¡pero se ve interesante! La imagen contiene elementos visuales que no coinciden con mis patrones comunes de reconocimiento. Intenta subir una imagen más clara o una con características más distintas.';
+
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imagePreview.src = e.target.result;
+                    previewContainer.style.display = 'block';
+                    analyzeBtn.disabled = false;
+                    resultContainer.style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Manejar arrastrar y soltar
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('active');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('active');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('active');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                fileInput.files = e.dataTransfer.files;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imagePreview.src = e.target.result;
+                    previewContainer.style.display = 'block';
+                    analyzeBtn.disabled = false;
+                    resultContainer.style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        analyzeBtn.addEventListener('click', () => {
+            // Mostrar carga
+            loading.style.display = 'block';
+            analyzeBtn.disabled = true;
+            
+            // Simular retraso de llamada API
+            setTimeout(() => {
+                const imageName = fileInput.files[0].name.toLowerCase();
+                let recognitionResult = defaultResult;
+                
+                // Buscar palabras clave en el nombre del archivo (reconocimiento simulado)
+                for (const item of mockRecognitionData) {
+                    if (item.keywords.some(keyword => imageName.includes(keyword))) {
+                        recognitionResult = item.result;
+                        break;
+                    }
+                }
+                
+                // Si no hay coincidencia en el nombre del archivo, verificar el contenido de la imagen (simulado)
+                if (recognitionResult === defaultResult) {
+                    // En una aplicación real, esto sería un análisis real de la imagen
+                    // Para fines de demostración, usaremos una selección aleatoria simple
+                    const randomIndex = Math.floor(Math.random() * mockRecognitionData.length);
+                    recognitionResult = mockRecognitionData[randomIndex].result;
+                }
+                
+                resultContent.textContent = recognitionResult;
+                resultContainer.style.display = 'block';
+                loading.style.display = 'none';
+                analyzeBtn.disabled = false;
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
