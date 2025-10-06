@@ -3,349 +3,276 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplicación de Reconocimiento de Imágenes</title>
+    <title>Creador de APK desde GitHub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
+            font-family: 'Inter', sans-serif;
         }
-        
-        .container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
-            width: 100%;
-            max-width: 800px;
-            padding: 40px;
-            text-align: center;
+        .fira-code {
+            font-family: 'Fira Code', monospace;
         }
-        
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 2.5rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+        /* Custom scrollbar for the log area */
+        .log-area::-webkit-scrollbar {
+            width: 8px;
         }
-        
-        .subtitle {
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 1.1rem;
+        .log-area::-webkit-scrollbar-track {
+            background: #1a202c; /* bg-gray-900 */
         }
-        
-        .upload-area {
-            border: 3px dashed #ddd;
-            border-radius: 15px;
-            padding: 40px 20px;
-            margin: 20px 0;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            background: #fafafa;
+        .log-area::-webkit-scrollbar-thumb {
+            background-color: #4a5568; /* bg-gray-700 */
+            border-radius: 4px;
+            border: 2px solid #1a202c;
         }
-        
-        .upload-area:hover {
-            border-color: #667eea;
-            background: #f0f5ff;
+        .log-area::-webkit-scrollbar-thumb:hover {
+            background-color: #718096; /* bg-gray-600 */
         }
-        
-        .upload-area.active {
-            border-color: #667eea;
-            background: #e6f0ff;
+        .dot-flashing {
+            position: relative;
+            width: 10px;
+            height: 10px;
+            border-radius: 5px;
+            background-color: #2dd4bf;
+            color: #2dd4bf;
+            animation: dotFlashing 1s infinite linear alternate;
+            animation-delay: .5s;
         }
-        
-        .upload-icon {
-            font-size: 3rem;
-            color: #667eea;
-            margin-bottom: 15px;
-        }
-        
-        .upload-text {
-            color: #555;
-            font-size: 1.1rem;
-            margin-bottom: 10px;
-        }
-        
-        .upload-hint {
-            color: #888;
-            font-size: 0.9rem;
-        }
-        
-        #file-input {
-            display: none;
-        }
-        
-        .preview-container {
-            margin: 25px 0;
-            display: none;
-        }
-        
-        #image-preview {
-            max-width: 100%;
-            max-height: 300px;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-        
-        .result-container {
-            display: none;
-            margin-top: 25px;
-            padding: 25px;
-            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
-            border-radius: 15px;
-            text-align: left;
-        }
-        
-        .result-title {
-            color: #333;
-            margin-bottom: 15px;
-            font-size: 1.3rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .result-content {
-            color: #555;
-            font-size: 1.1rem;
-            line-height: 1.6;
-        }
-        
-        .loading {
-            display: none;
-            margin: 20px 0;
-        }
-        
-        .spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            border-left-color: #667eea;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            font-size: 1.1rem;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 20px;
+        .dot-flashing::before, .dot-flashing::after {
+            content: '';
             display: inline-block;
+            position: absolute;
+            top: 0;
         }
-        
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        .dot-flashing::before {
+            left: -15px;
+            width: 10px;
+            height: 10px;
+            border-radius: 5px;
+            background-color: #2dd4bf;
+            color: #2dd4bf;
+            animation: dotFlashing 1s infinite alternate;
+            animation-delay: 0s;
         }
-        
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
+        .dot-flashing::after {
+            left: 15px;
+            width: 10px;
+            height: 10px;
+            border-radius: 5px;
+            background-color: #2dd4bf;
+            color: #2dd4bf;
+            animation: dotFlashing 1s infinite alternate;
+            animation-delay: 1s;
         }
-        
-        @media (max-width: 600px) {
-            .container {
-                padding: 25px;
+
+        @keyframes dotFlashing {
+            0% {
+                background-color: #2dd4bf;
             }
-            
-            h1 {
-                font-size: 2rem;
-            }
-            
-            .upload-area {
-                padding: 30px 15px;
+            50%,
+            100% {
+                background-color: rgba(45, 212, 191, 0.2);
             }
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <h1>Reconocimiento de Imágenes</h1>
-        <p class="subtitle">Sube una foto y descubre qué contiene</p>
-        
-        <div class="upload-area" id="upload-area">
-            <div class="upload-icon">📷</div>
-            <p class="upload-text">Haz clic para subir una imagen</p>
-            <p class="upload-hint">Compatible con JPG, PNG, GIF (Máx. 5MB)</p>
-            <input type="file" id="file-input" accept="image/*">
+<body class="bg-gray-100 text-gray-900 flex items-center justify-center min-h-screen p-4">
+
+    <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-3xl border border-gray-200">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-3xl font-bold text-teal-600">Creador de APK desde GitHub</h1>
+                <p class="text-gray-600">Ingresa la URL de un repositorio público para iniciar el proceso de compilación.</p>
+            </div>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v11.494m-9-5.747h18M5.464 5.464l13.072 13.072m0-13.072L5.464 18.536" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 21v-4.875c0-.621.504-1.125 1.125-1.125h5.25c.621 0 1.125.504 1.125 1.125V21" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-4.875" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3v4.875c0 .621.504 1.125 1.125 1.125h5.25c.621 0 1.125-.504 1.125-1.125V3" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v4.875" />
+            </svg>
+        </div>
+
+        <!-- Input Form -->
+        <div class="flex flex-col sm:flex-row gap-2 mb-4">
+            <input type="url" id="repoUrl" placeholder="https://github.com/usuario/repositorio" class="flex-grow bg-gray-50 border-2 border-gray-300 focus:border-teal-500 focus:ring-teal-500 text-gray-900 rounded-lg px-4 py-3 transition duration-300 w-full" autocomplete="off">
+            <button id="buildBtn" class="bg-teal-500 hover:bg-teal-600 text-gray-900 font-bold py-3 px-6 rounded-lg transition duration-300 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.428a1 1 0 00.475 0l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                </svg>
+                <span>Crear APK</span>
+            </button>
         </div>
         
-        <div class="preview-container" id="preview-container">
-            <img id="image-preview" alt="Vista previa">
+        <!-- Error Message -->
+        <p id="errorMsg" class="text-red-500 text-sm mb-4 h-5"></p>
+
+        <!-- Log Output Area -->
+        <div class="bg-gray-900 rounded-lg p-4 h-72 overflow-y-auto log-area fira-code text-sm border border-gray-700">
+            <div id="logContent">
+                <p class="text-gray-500">> Esperando la URL del repositorio...</p>
+            </div>
         </div>
         
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <p>Analizando tu imagen...</p>
+        <!-- Result/Download Area -->
+        <div id="resultArea" class="mt-6 text-center hidden">
+             <div class="bg-green-100 border border-green-300 text-green-800 px-4 py-3 rounded-lg flex items-center justify-center space-x-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                <div>
+                    <h3 class="font-bold">¡Compilación Exitosa!</h3>
+                    <p class="text-sm">Tu archivo APK está listo para descargar.</p>
+                </div>
+            </div>
+            <button id="downloadBtn" class="mt-4 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg transition duration-300 flex items-center justify-center space-x-2 mx-auto">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+                <span>Descargar app-debug.apk</span>
+            </button>
         </div>
-        
-        <div class="result-container" id="result-container">
-            <h3 class="result-title">🔍 Resultados del Reconocimiento</h3>
-            <p class="result-content" id="result-content"></p>
-        </div>
-        
-        <button class="btn" id="analyze-btn" disabled>Analizar Imagen</button>
+
     </div>
 
     <script>
-        const uploadArea = document.getElementById('upload-area');
-        const fileInput = document.getElementById('file-input');
-        const previewContainer = document.getElementById('preview-container');
-        const imagePreview = document.getElementById('image-preview');
-        const loading = document.getElementById('loading');
-        const resultContainer = document.getElementById('result-container');
-        const resultContent = document.getElementById('result-content');
-        const analyzeBtn = document.getElementById('analyze-btn');
+        const repoUrlInput = document.getElementById('repoUrl');
+        const buildBtn = document.getElementById('buildBtn');
+        const logContent = document.getElementById('logContent');
+        const resultArea = document.getElementById('resultArea');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const errorMsg = document.getElementById('errorMsg');
 
-        // Datos de reconocimiento simulado
-        const mockRecognitionData = [
-            {
-                keywords: ['gato', 'gatito', 'felino', 'mascota'],
-                result: '¡Esto parece ser un gato! Los gatos son pequeños mamíferos carnívoros domesticados conocidos por su agilidad, naturaleza juguetona y compañía con los humanos.'
-            },
-            {
-                keywords: ['perro', 'cachorro', 'canino', 'mascota'],
-                result: '¡Esto parece ser un perro! Los perros son mamíferos domesticados leales que han sido compañeros humanos durante miles de años, conocidos por su naturaleza protectora y afecto.'
-            },
-            {
-                keywords: ['coche', 'automóvil', 'vehículo', 'transporte'],
-                result: '¡Esto es un automóvil! Los coches son vehículos de motor con ruedas utilizados para el transporte, típicamente con cuatro ruedas y propulsados por un motor de combustión interna o motor eléctrico.'
-            },
-            {
-                keywords: ['árbol', 'planta', 'bosque', 'naturaleza'],
-                result: '¡Esto parece ser un árbol! Los árboles son plantas perennes con troncos leñosos, ramas y hojas, desempeñando un papel crucial en los ecosistemas al producir oxígeno y proporcionar hábitat.'
-            },
-            {
-                keywords: ['edificio', 'casa', 'arquitectura', 'estructura'],
-                result: '¡Esto es un edificio! Los edificios son estructuras con techos y paredes que proporcionan refugio y sirven para diversos propósitos como uso residencial, comercial o industrial.'
-            },
-            {
-                keywords: ['comida', 'comida', 'plato', 'cocina'],
-                result: '¡Esto parece ser comida! La comida proporciona nutrientes esenciales para la supervivencia y viene en innumerables variedades en diferentes culturas y cocinas.'
-            },
-            {
-                keywords: ['persona', 'humano', 'gente', 'rostro'],
-                result: '¡Esto parece ser una persona! Los humanos son mamíferos sociales altamente inteligentes caracterizados por su postura erguida, lenguaje complejo y habilidades cognitivas avanzadas.'
-            },
-            {
-                keywords: ['flor', 'flor', 'planta', 'jardín'],
-                result: '¡Esto es una flor! Las flores son las estructuras reproductivas de las plantas con flores, conocidas por su belleza, fragancia y papel en la polinización.'
-            },
-            {
-                keywords: ['montaña', 'colina', 'pico', 'paisaje'],
-                result: '¡Esto parece ser una montaña! Las montañas son grandes formaciones de tierra que se elevan prominentemente por encima de sus alrededores, formadas por fuerzas tectónicas o actividad volcánica.'
-            },
-            {
-                keywords: ['océano', 'mar', 'agua', 'playa'],
-                result: '¡Esto parece ser un océano! Los océanos son vastos cuerpos de agua salada que cubren aproximadamente el 71% de la superficie de la Tierra y contienen el 97% del agua de la Tierra.'
+        // URL validation regex for GitHub
+        const GITHUB_URL_REGEX = /^(https|http):\/\/github\.com\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+(\.git)?\/?$/;
+
+        // Function to add a log line with a timestamp
+        const addLog = (message, colorClass = 'text-gray-300') => {
+            const timestamp = new Date().toLocaleTimeString();
+            const logLine = document.createElement('p');
+            logLine.innerHTML = `<span class="text-gray-500 mr-2">[${timestamp}]</span> <span class="${colorClass}">${message}</span>`;
+            logContent.appendChild(logLine);
+            logContent.parentElement.scrollTop = logContent.parentElement.scrollHeight; // Auto-scroll
+        };
+        
+        // Function to simulate a delay
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        // Main build process simulation
+        const startBuildProcess = async () => {
+            // 1. Reset UI
+            buildBtn.disabled = true;
+            resultArea.classList.add('hidden');
+            logContent.innerHTML = '';
+            errorMsg.textContent = '';
+
+            const repoUrl = repoUrlInput.value.trim();
+
+            // 2. Validate URL
+            if (!GITHUB_URL_REGEX.test(repoUrl)) {
+                errorMsg.textContent = 'Por favor, introduce una URL de repositorio de GitHub válida.';
+                addLog('Error: URL no válida.', 'text-red-400');
+                buildBtn.disabled = false;
+                return;
             }
-        ];
 
-        // Resultado predeterminado para imágenes no reconocidas
-        const defaultResult = 'No estoy del todo seguro de qué es esto, ¡pero se ve interesante! La imagen contiene elementos visuales que no coinciden con mis patrones comunes de reconocimiento. Intenta subir una imagen más clara o una con características más distintas.';
+            // 3. Simulate build steps
+            try {
+                addLog(`Iniciando compilación para: <span class="text-teal-400">${repoUrl}</span>`);
+                await sleep(1000);
 
-        uploadArea.addEventListener('click', () => {
-            fileInput.click();
-        });
+                addLog('Validando repositorio...');
+                await sleep(1500);
 
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    imagePreview.src = e.target.result;
-                    previewContainer.style.display = 'block';
-                    analyzeBtn.disabled = false;
-                    resultContainer.style.display = 'none';
-                };
-                reader.readAsDataURL(file);
+                addLog('Clonando repositorio desde GitHub...');
+                await sleep(2500);
+                addLog('Repositorio clonado exitosamente en /tmp/build.');
+                await sleep(500);
+
+                addLog('Detectando configuración de Android (Gradle)...');
+                await sleep(1500);
+                addLog('Se encontró el wrapper de Gradle: <span class="fira-code">gradlew</span>');
+                await sleep(1000);
+
+                addLog('Iniciando el daemon de Gradle...');
+                await sleep(2000);
+                addLog('El daemon de Gradle se inició correctamente (PID 12345).');
+                await sleep(1000);
+                
+                addLog('<span class="text-yellow-400">> ./gradlew assembleDebug</span>');
+                const buildStatus = document.createElement('p');
+                buildStatus.innerHTML = `<span class="text-gray-500 mr-2">[${new Date().toLocaleTimeString()}]</span> <span class="text-gray-300">Compilando... </span>`;
+                const loader = document.createElement('span');
+                loader.className = 'dot-flashing';
+                buildStatus.appendChild(loader);
+                logContent.appendChild(buildStatus);
+                logContent.parentElement.scrollTop = logContent.parentElement.scrollHeight;
+
+                await sleep(5000); // Main "compilation" time
+
+                // Randomly decide if build fails or succeeds for realism
+                if (Math.random() < 0.1) { // 10% chance of failure
+                    throw new Error("La compilación falló: no se pudo resolver la dependencia 'com.example:non-existent:1.0'.");
+                }
+                
+                loader.remove();
+                buildStatus.innerHTML += '<span class="text-green-400">¡Éxito!</span>';
+
+                await sleep(1500);
+
+                addLog('<span class="text-green-400 font-bold">BUILD SUCCESSFUL in 1m 15s</span>');
+                addLog('Se generaron 247 tareas ejecutables.');
+                await sleep(1000);
+                
+                addLog('APK creado en: <span class="fira-code">/tmp/build/app/build/outputs/apk/debug/app-debug.apk</span>');
+                
+                // 4. Show success and download button
+                resultArea.classList.remove('hidden');
+
+            } catch (error) {
+                addLog(`Error: ${error.message}`, 'text-red-400 font-bold');
+                addLog('<span class="text-red-500 font-bold">BUILD FAILED</span>');
+            } finally {
+                // 5. Re-enable button
+                buildBtn.disabled = false;
             }
-        });
+        };
 
-        // Manejar arrastrar y soltar
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.classList.add('active');
-        });
-
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('active');
-        });
-
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('active');
-            const file = e.dataTransfer.files[0];
-            if (file && file.type.startsWith('image/')) {
-                fileInput.files = e.dataTransfer.files;
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    imagePreview.src = e.target.result;
-                    previewContainer.style.display = 'block';
-                    analyzeBtn.disabled = false;
-                    resultContainer.style.display = 'none';
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-
-        analyzeBtn.addEventListener('click', () => {
-            // Mostrar carga
-            loading.style.display = 'block';
-            analyzeBtn.disabled = true;
+        // Dummy download function
+        const downloadDummyApk = () => {
+            const repoName = (repoUrlInput.value.split('/').pop() || 'app').replace('.git', '');
+            const fileName = `${repoName}-debug.apk`;
+            const dummyContent = `This is a dummy APK file generated for the repository: ${repoUrlInput.value}\nTimestamp: ${new Date().toISOString()}`;
+            const blob = new Blob([dummyContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
             
-            // Simular retraso de llamada API
-            setTimeout(() => {
-                const imageName = fileInput.files[0].name.toLowerCase();
-                let recognitionResult = defaultResult;
-                
-                // Buscar palabras clave en el nombre del archivo (reconocimiento simulado)
-                for (const item of mockRecognitionData) {
-                    if (item.keywords.some(keyword => imageName.includes(keyword))) {
-                        recognitionResult = item.result;
-                        break;
-                    }
-                }
-                
-                // Si no hay coincidencia en el nombre del archivo, verificar el contenido de la imagen (simulado)
-                if (recognitionResult === defaultResult) {
-                    // En una aplicación real, esto sería un análisis real de la imagen
-                    // Para fines de demostración, usaremos una selección aleatoria simple
-                    const randomIndex = Math.floor(Math.random() * mockRecognitionData.length);
-                    recognitionResult = mockRecognitionData[randomIndex].result;
-                }
-                
-                resultContent.textContent = recognitionResult;
-                resultContainer.style.display = 'block';
-                loading.style.display = 'none';
-                analyzeBtn.disabled = false;
-            }, 2000);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
+
+        buildBtn.addEventListener('click', startBuildProcess);
+        downloadBtn.addEventListener('click', downloadDummyApk);
+
+        // Add a listener to the input to provide real-time feedback
+        repoUrlInput.addEventListener('input', () => {
+            if (repoUrlInput.value.trim() === '') {
+                errorMsg.textContent = '';
+                buildBtn.disabled = false;
+            } else if (GITHUB_URL_REGEX.test(repoUrlInput.value.trim())) {
+                errorMsg.textContent = '';
+                buildBtn.disabled = false;
+            } else {
+                errorMsg.textContent = 'La URL no parece ser un repositorio de GitHub válido.';
+                buildBtn.disabled = true;
+            }
         });
     </script>
 </body>
 </html>
+
