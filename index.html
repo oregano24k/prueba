@@ -45,7 +45,21 @@
                     <button onclick="togglePhaseCompletion('phase-1', 1)" class="phase-toggle bg-green-100 text-green-700 text-sm font-semibold px-3 py-1 rounded-full hover:bg-green-200 transition">Marcar como Completado</button>
                 </h2>
                 <div class="text-gray-700 space-y-4">
-                    <p>Antes de empezar, asegúrese de tener instalados los siguientes programas:</p>
+                    <p class="mb-2">Antes de empezar, asegúrese de tener instalados los siguientes programas:</p>
+                    
+                    <!-- Botones de Instalación -->
+                    <div class="flex flex-wrap gap-4 pt-2 pb-4">
+                        <a href="https://nodejs.org/es/download" target="_blank" class="flex-1 min-w-[150px] text-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition shadow-md">
+                            Instalar Node.js
+                        </a>
+                        <a href="https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html" target="_blank" class="flex-1 min-w-[150px] text-center bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition shadow-md">
+                            Instalar Java (JDK 17+)
+                        </a>
+                        <a href="https://developer.android.com/studio" target="_blank" class="flex-1 min-w-[150px] text-center bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition shadow-md">
+                            Descargar Android Studio
+                        </a>
+                    </div>
+                    
                     <ul class="list-disc list-inside ml-4 space-y-1">
                         <li><strong>Node.js:</strong> Para NPM y Cordova.</li>
                         <li><strong>Java Development Kit (JDK) 17 o superior:</strong> Para la construcción de Android.</li>
