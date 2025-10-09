@@ -3,276 +3,190 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Creador de APK desde GitHub</title>
+    <title>Manual: HTML a APK con Cordova</title>
+    <!-- Carga de Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Configuración de la fuente Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
-        }
-        .fira-code {
-            font-family: 'Fira Code', monospace;
-        }
-        /* Custom scrollbar for the log area */
-        .log-area::-webkit-scrollbar {
-            width: 8px;
-        }
-        .log-area::-webkit-scrollbar-track {
-            background: #1a202c; /* bg-gray-900 */
-        }
-        .log-area::-webkit-scrollbar-thumb {
-            background-color: #4a5568; /* bg-gray-700 */
-            border-radius: 4px;
-            border: 2px solid #1a202c;
-        }
-        .log-area::-webkit-scrollbar-thumb:hover {
-            background-color: #718096; /* bg-gray-600 */
-        }
-        .dot-flashing {
-            position: relative;
-            width: 10px;
-            height: 10px;
-            border-radius: 5px;
-            background-color: #2dd4bf;
-            color: #2dd4bf;
-            animation: dotFlashing 1s infinite linear alternate;
-            animation-delay: .5s;
-        }
-        .dot-flashing::before, .dot-flashing::after {
-            content: '';
-            display: inline-block;
-            position: absolute;
-            top: 0;
-        }
-        .dot-flashing::before {
-            left: -15px;
-            width: 10px;
-            height: 10px;
-            border-radius: 5px;
-            background-color: #2dd4bf;
-            color: #2dd4bf;
-            animation: dotFlashing 1s infinite alternate;
-            animation-delay: 0s;
-        }
-        .dot-flashing::after {
-            left: 15px;
-            width: 10px;
-            height: 10px;
-            border-radius: 5px;
-            background-color: #2dd4bf;
-            color: #2dd4bf;
-            animation: dotFlashing 1s infinite alternate;
-            animation-delay: 1s;
-        }
-
-        @keyframes dotFlashing {
-            0% {
-                background-color: #2dd4bf;
-            }
-            50%,
-            100% {
-                background-color: rgba(45, 212, 191, 0.2);
-            }
+            background-color: #f7f7f7;
         }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-900 flex items-center justify-center min-h-screen p-4">
+<body class="min-h-screen p-4 sm:p-8">
 
-    <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-3xl border border-gray-200">
-        <!-- Header -->
-        <div class="flex items-center justify-between mb-6">
-            <div>
-                <h1 class="text-3xl font-bold text-teal-600">Creador de APK desde GitHub</h1>
-                <p class="text-gray-600">Ingresa la URL de un repositorio público para iniciar el proceso de compilación.</p>
+    <div class="max-w-4xl mx-auto bg-white shadow-xl rounded-2xl p-6 md:p-10">
+
+        <!-- Encabezado y Barra de Progreso -->
+        <header class="mb-8">
+            <h1 class="text-3xl sm:text-4xl font-extrabold text-blue-800 mb-2">
+                HTML a APK con Cordova
+            </h1>
+            <p class="text-gray-600 mb-6">
+                Guía paso a paso para convertir archivos web en una aplicación de Android funcional.
+            </p>
+
+            <!-- Barra de Progreso -->
+            <div class="w-full bg-gray-200 rounded-full h-3">
+                <div id="progressBar" class="bg-blue-600 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
             </div>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v11.494m-9-5.747h18M5.464 5.464l13.072 13.072m0-13.072L5.464 18.536" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 21v-4.875c0-.621.504-1.125 1.125-1.125h5.25c.621 0 1.125.504 1.125 1.125V21" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-4.875" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3v4.875c0 .621.504 1.125 1.125 1.125h5.25c.621 0 1.125-.504 1.125-1.125V3" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v4.875" />
-            </svg>
-        </div>
+            <p id="progressText" class="text-sm text-gray-500 mt-2">Progreso: 0/3 Fases completadas</p>
+        </header>
 
-        <!-- Input Form -->
-        <div class="flex flex-col sm:flex-row gap-2 mb-4">
-            <input type="url" id="repoUrl" placeholder="https://github.com/usuario/repositorio" class="flex-grow bg-gray-50 border-2 border-gray-300 focus:border-teal-500 focus:ring-teal-500 text-gray-900 rounded-lg px-4 py-3 transition duration-300 w-full" autocomplete="off">
-            <button id="buildBtn" class="bg-teal-500 hover:bg-teal-600 text-gray-900 font-bold py-3 px-6 rounded-lg transition duration-300 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.428a1 1 0 00.475 0l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-                </svg>
-                <span>Crear APK</span>
-            </button>
-        </div>
-        
-        <!-- Error Message -->
-        <p id="errorMsg" class="text-red-500 text-sm mb-4 h-5"></p>
+        <!-- Contenido del Manual -->
+        <div class="space-y-12">
 
-        <!-- Log Output Area -->
-        <div class="bg-gray-900 rounded-lg p-4 h-72 overflow-y-auto log-area fira-code text-sm border border-gray-700">
-            <div id="logContent">
-                <p class="text-gray-500">> Esperando la URL del repositorio...</p>
-            </div>
-        </div>
-        
-        <!-- Result/Download Area -->
-        <div id="resultArea" class="mt-6 text-center hidden">
-             <div class="bg-green-100 border border-green-300 text-green-800 px-4 py-3 rounded-lg flex items-center justify-center space-x-4">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                </svg>
-                <div>
-                    <h3 class="font-bold">¡Compilación Exitosa!</h3>
-                    <p class="text-sm">Tu archivo APK está listo para descargar.</p>
+            <!-- FASE 1: Instalación y Verificación de Herramientas -->
+            <section id="phase-1" class="phase-card p-6 border-2 border-gray-100 rounded-xl transition duration-300 hover:shadow-md">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 flex justify-between items-center">
+                    <span>1. Instalación y Verificación de Herramientas</span>
+                    <button onclick="togglePhaseCompletion('phase-1', 1)" class="phase-toggle bg-green-100 text-green-700 text-sm font-semibold px-3 py-1 rounded-full hover:bg-green-200 transition">Marcar como Completado</button>
+                </h2>
+                <div class="text-gray-700 space-y-4">
+                    <p>Antes de empezar, asegúrese de tener instalados los siguientes programas:</p>
+                    <ul class="list-disc list-inside ml-4 space-y-1">
+                        <li><strong>Node.js:</strong> Para NPM y Cordova.</li>
+                        <li><strong>Java Development Kit (JDK) 17 o superior:</strong> Para la construcción de Android.</li>
+                        <li><strong>Android Studio:</strong> Para obtener las herramientas de desarrollo (SDK).</li>
+                        <li><strong>TurboWarp (Opcional):</strong> Para exportar archivos SB3 a HTML.</li>
+                    </ul>
+
+                    <h3 class="font-semibold mt-4 text-lg">Instalar Cordova Globalmente</h3>
+                    <p class="bg-gray-50 p-3 rounded-lg border border-gray-200 overflow-x-auto">
+                        Abra la **Línea de Comandos (CMD)** o **PowerShell** y ejecute:
+                    </p>
+                    <pre class="bg-gray-800 text-white p-3 rounded-lg overflow-x-auto text-sm">
+java -version
+npm -version
+npm install -g cordova
+cordova -version
+                    </pre>
                 </div>
-            </div>
-            <button id="downloadBtn" class="mt-4 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg transition duration-300 flex items-center justify-center space-x-2 mx-auto">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
-                </svg>
-                <span>Descargar app-debug.apk</span>
-            </button>
+            </section>
+
+            <!-- FASE 2: Creación y Configuración del Proyecto Cordova -->
+            <section id="phase-2" class="phase-card p-6 border-2 border-gray-100 rounded-xl transition duration-300 hover:shadow-md">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 flex justify-between items-center">
+                    <span>2. Creación y Configuración del Proyecto Cordova</span>
+                    <button onclick="togglePhaseCompletion('phase-2', 2)" class="phase-toggle bg-green-100 text-green-700 text-sm font-semibold px-3 py-1 rounded-full hover:bg-green-200 transition">Marcar como Completado</button>
+                </h2>
+                <div class="text-gray-700 space-y-4">
+                    <h3 class="font-semibold text-lg">Crear el Proyecto Base</h3>
+                    <pre class="bg-gray-800 text-white p-3 rounded-lg overflow-x-auto text-sm">
+cd Desktop
+cordova create ejemplo com.company.ejemplo ejemplo
+cd ejemplo
+                    </pre>
+                    
+                    <h3 class="font-semibold text-lg">Agregar la Plataforma Android</h3>
+                    <pre class="bg-gray-800 text-white p-3 rounded-lg overflow-x-auto text-sm">
+cordova platform add android
+                    </pre>
+
+                    <h3 class="font-semibold text-lg">Reemplazar Contenido HTML</h3>
+                    <p>Copie su <strong>contenido web</strong> (incluyendo <code>index.html</code>, CSS, JS, imágenes) y <strong>reemplace</strong> el contenido por defecto dentro de la carpeta <code>ejemplo/www</code>.</p>
+                    
+                    <h3 class="font-semibold text-lg">Configurar el Archivo <code>config.xml</code></h3>
+                    <p>Edite <code>ejemplo/config.xml</code> para cambiar el <strong>nombre</strong>, la <strong>orientación</strong> y agregar un <strong>ícono</strong> personalizado, o configurar otras preferencias como pantalla completa.</p>
+                    <pre class="bg-gray-800 text-white p-3 rounded-lg overflow-x-auto text-sm">
+&lt;widget name="ejemplo" ...&gt;
+    &lt;preference name="Orientation" value="landscape" /&gt;
+    &lt;preference name="Fullscreen" value="true" /&gt;
+    &lt;icon src="ubicacion/de/su/icono.png" /&gt;
+&lt;/widget&gt;
+                    </pre>
+                </div>
+            </section>
+
+            <!-- FASE 3: Generación del APK -->
+            <section id="phase-3" class="phase-card p-6 border-2 border-gray-100 rounded-xl transition duration-300 hover:shadow-md">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 flex justify-between items-center">
+                    <span>3. Generación y Firma del APK</span>
+                    <button onclick="togglePhaseCompletion('phase-3', 3)" class="phase-toggle bg-green-100 text-green-700 text-sm font-semibold px-3 py-1 rounded-full hover:bg-green-200 transition">Marcar como Completado</button>
+                </h2>
+                <div class="text-gray-700 space-y-4">
+                    <h3 class="font-semibold text-lg">Generar APK de Debug (Opcional)</h3>
+                    <pre class="bg-gray-800 text-white p-3 rounded-lg overflow-x-auto text-sm">
+cordova build android
+                    </pre>
+                    <p>El APK de debug se encuentra en: <code>platforms/android/app/build/outputs/apk/debug/app-debug.apk</code></p>
+                    
+                    <h3 class="font-semibold text-lg">Generar APK de Release (Producción)</h3>
+                    <pre class="bg-gray-800 text-white p-3 rounded-lg overflow-x-auto text-sm">
+cordova build android --release -- --packageType=apk
+                    </pre>
+                    
+                    <h3 class="font-semibold text-lg">Firmar el APK (OBLIGATORIO)</h3>
+                    <ol class="list-decimal list-inside ml-4 space-y-3">
+                        <li><strong>Crear el Keystore:</strong>
+                            <pre class="bg-gray-800 text-white p-3 rounded-lg overflow-x-auto text-sm">
+keytool -genkey -v -keystore ejemplo-key.keystore -alias ejemplo-alias -keyalg RSA -keysize 2048 -validity 10000
+                            </pre>
+                            *Guarde el archivo <code>ejemplo-key.keystore</code> de forma segura.</li>
+                        <li><strong>Firmar el APK sin firmar:</strong>
+                            <pre class="bg-gray-800 text-white p-3 rounded-lg overflow-x-auto text-sm">
+jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 -keystore ejemplo-key.keystore app-release-unsigned.apk ejemplo-alias
+                            </pre>
+                            *El APK firmado final es <code>app-release-unsigned.apk</code> (ubicado en la carpeta <code>release</code>).</li>
+                    </ol>
+                </div>
+            </section>
         </div>
 
+        <footer class="mt-10 pt-6 border-t border-gray-200 text-center text-sm text-gray-500">
+            <p>Hecho con Cordova, HTML y Tailwind CSS.</p>
+        </footer>
     </div>
 
     <script>
-        const repoUrlInput = document.getElementById('repoUrl');
-        const buildBtn = document.getElementById('buildBtn');
-        const logContent = document.getElementById('logContent');
-        const resultArea = document.getElementById('resultArea');
-        const downloadBtn = document.getElementById('downloadBtn');
-        const errorMsg = document.getElementById('errorMsg');
-
-        // URL validation regex for GitHub
-        const GITHUB_URL_REGEX = /^(https|http):\/\/github\.com\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+(\.git)?\/?$/;
-
-        // Function to add a log line with a timestamp
-        const addLog = (message, colorClass = 'text-gray-300') => {
-            const timestamp = new Date().toLocaleTimeString();
-            const logLine = document.createElement('p');
-            logLine.innerHTML = `<span class="text-gray-500 mr-2">[${timestamp}]</span> <span class="${colorClass}">${message}</span>`;
-            logContent.appendChild(logLine);
-            logContent.parentElement.scrollTop = logContent.parentElement.scrollHeight; // Auto-scroll
-        };
+        // Lógica para el seguimiento del progreso
+        const totalPhases = 3;
+        let completedPhases = 0;
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
         
-        // Function to simulate a delay
-        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-        // Main build process simulation
-        const startBuildProcess = async () => {
-            // 1. Reset UI
-            buildBtn.disabled = true;
-            resultArea.classList.add('hidden');
-            logContent.innerHTML = '';
-            errorMsg.textContent = '';
-
-            const repoUrl = repoUrlInput.value.trim();
-
-            // 2. Validate URL
-            if (!GITHUB_URL_REGEX.test(repoUrl)) {
-                errorMsg.textContent = 'Por favor, introduce una URL de repositorio de GitHub válida.';
-                addLog('Error: URL no válida.', 'text-red-400');
-                buildBtn.disabled = false;
-                return;
-            }
-
-            // 3. Simulate build steps
-            try {
-                addLog(`Iniciando compilación para: <span class="text-teal-400">${repoUrl}</span>`);
-                await sleep(1000);
-
-                addLog('Validando repositorio...');
-                await sleep(1500);
-
-                addLog('Clonando repositorio desde GitHub...');
-                await sleep(2500);
-                addLog('Repositorio clonado exitosamente en /tmp/build.');
-                await sleep(500);
-
-                addLog('Detectando configuración de Android (Gradle)...');
-                await sleep(1500);
-                addLog('Se encontró el wrapper de Gradle: <span class="fira-code">gradlew</span>');
-                await sleep(1000);
-
-                addLog('Iniciando el daemon de Gradle...');
-                await sleep(2000);
-                addLog('El daemon de Gradle se inició correctamente (PID 12345).');
-                await sleep(1000);
-                
-                addLog('<span class="text-yellow-400">> ./gradlew assembleDebug</span>');
-                const buildStatus = document.createElement('p');
-                buildStatus.innerHTML = `<span class="text-gray-500 mr-2">[${new Date().toLocaleTimeString()}]</span> <span class="text-gray-300">Compilando... </span>`;
-                const loader = document.createElement('span');
-                loader.className = 'dot-flashing';
-                buildStatus.appendChild(loader);
-                logContent.appendChild(buildStatus);
-                logContent.parentElement.scrollTop = logContent.parentElement.scrollHeight;
-
-                await sleep(5000); // Main "compilation" time
-
-                // Randomly decide if build fails or succeeds for realism
-                if (Math.random() < 0.1) { // 10% chance of failure
-                    throw new Error("La compilación falló: no se pudo resolver la dependencia 'com.example:non-existent:1.0'.");
-                }
-                
-                loader.remove();
-                buildStatus.innerHTML += '<span class="text-green-400">¡Éxito!</span>';
-
-                await sleep(1500);
-
-                addLog('<span class="text-green-400 font-bold">BUILD SUCCESSFUL in 1m 15s</span>');
-                addLog('Se generaron 247 tareas ejecutables.');
-                await sleep(1000);
-                
-                addLog('APK creado en: <span class="fira-code">/tmp/build/app/build/outputs/apk/debug/app-debug.apk</span>');
-                
-                // 4. Show success and download button
-                resultArea.classList.remove('hidden');
-
-            } catch (error) {
-                addLog(`Error: ${error.message}`, 'text-red-400 font-bold');
-                addLog('<span class="text-red-500 font-bold">BUILD FAILED</span>');
-            } finally {
-                // 5. Re-enable button
-                buildBtn.disabled = false;
-            }
+        // Estado de cada fase
+        const phaseState = {
+            'phase-1': false,
+            'phase-2': false,
+            'phase-3': false
         };
 
-        // Dummy download function
-        const downloadDummyApk = () => {
-            const repoName = (repoUrlInput.value.split('/').pop() || 'app').replace('.git', '');
-            const fileName = `${repoName}-debug.apk`;
-            const dummyContent = `This is a dummy APK file generated for the repository: ${repoUrlInput.value}\nTimestamp: ${new Date().toISOString()}`;
-            const blob = new Blob([dummyContent], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = fileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        };
+        function updateProgress() {
+            completedPhases = Object.values(phaseState).filter(isCompleted => isCompleted).length;
+            const percentage = (completedPhases / totalPhases) * 100;
+            progressBar.style.width = `${percentage}%`;
+            progressText.textContent = `Progreso: ${completedPhases}/${totalPhases} Fases completadas`;
+        }
 
-        buildBtn.addEventListener('click', startBuildProcess);
-        downloadBtn.addEventListener('click', downloadDummyApk);
+        function togglePhaseCompletion(phaseId, phaseNumber) {
+            const phaseElement = document.getElementById(phaseId);
+            const toggleButton = phaseElement.querySelector('.phase-toggle');
 
-        // Add a listener to the input to provide real-time feedback
-        repoUrlInput.addEventListener('input', () => {
-            if (repoUrlInput.value.trim() === '') {
-                errorMsg.textContent = '';
-                buildBtn.disabled = false;
-            } else if (GITHUB_URL_REGEX.test(repoUrlInput.value.trim())) {
-                errorMsg.textContent = '';
-                buildBtn.disabled = false;
+            if (phaseState[phaseId]) {
+                // Marcar como NO completado
+                phaseState[phaseId] = false;
+                phaseElement.classList.remove('border-green-500', 'bg-green-50');
+                phaseElement.classList.add('border-gray-100');
+                toggleButton.textContent = 'Marcar como Completado';
+                toggleButton.classList.remove('bg-red-100', 'text-red-700', 'hover:bg-red-200');
+                toggleButton.classList.add('bg-green-100', 'text-green-700', 'hover:bg-green-200');
             } else {
-                errorMsg.textContent = 'La URL no parece ser un repositorio de GitHub válido.';
-                buildBtn.disabled = true;
+                // Marcar como completado
+                phaseState[phaseId] = true;
+                phaseElement.classList.remove('border-gray-100');
+                phaseElement.classList.add('border-green-500', 'bg-green-50');
+                toggleButton.textContent = 'Completado';
+                toggleButton.classList.remove('bg-green-100', 'text-green-700', 'hover:bg-green-200');
+                toggleButton.classList.add('bg-red-100', 'text-red-700', 'hover:bg-red-200');
             }
-        });
+            updateProgress();
+        }
+
+        // Inicializar
+        updateProgress();
     </script>
 </body>
 </html>
-
