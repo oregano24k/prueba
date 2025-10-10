@@ -71,10 +71,17 @@
                     <p class="bg-gray-50 p-3 rounded-lg border border-gray-200 overflow-x-auto">
                         Abra la **Línea de Comandos (CMD)** o **PowerShell** y ejecute:
                     </p>
+
+                    <!-- Advertencia para permisos (sudo) -->
+                    <div class="p-3 mb-2 text-sm text-yellow-800 rounded-lg bg-yellow-50 dark:bg-gray-800 dark:text-yellow-300" role="alert">
+                        ⚠️ **Nota importante (macOS/Linux):** Si encuentra un error de "EACCES: permission denied", use **sudo** antes del comando de instalación.
+                    </div>
+
                     <pre class="bg-gray-800 text-white p-3 rounded-lg overflow-x-auto text-sm">
 java -version
 npm -version
-npm install -g cordova
+# Use 'sudo' si es necesario en macOS/Linux
+sudo npm install -g cordova 
 cordova -version
                     </pre>
                 </div>
